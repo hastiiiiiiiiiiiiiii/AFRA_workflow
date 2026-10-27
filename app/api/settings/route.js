@@ -1,0 +1,3 @@
+import { prisma } from "@/lib/server/db"; import { getCurrentUser } from "@/lib/server/auth"; import { ok, fail, unauthorized } from "@/lib/server/response";
+export async function GET(){const u=await getCurrentUser();if(!u)return unauthorized();const s=await prisma.userSetting.findUnique({where:{userId:u.id}});return ok(s)}
+export async function PATCH(r){const u=await getCurrentUser();if(!u)return unauthorized();const b=await r.json();const s=await prisma.userSetting.upsert({where:{userId:u.id},update:{theme:b.theme,taskAssigned:b.notifications?.taskAssigned,requestUpdates:b.notifications?.requestUpdates,paymentUpdates:b.notifications?.paymentUpdates,systemActivities:b.notifications?.systemActivities},create:{userId:u.id}});return ok(s)}

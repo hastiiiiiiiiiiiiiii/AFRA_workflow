@@ -1,0 +1,2 @@
+import { prisma } from "@/lib/server/db"; import { getCurrentUser } from "@/lib/server/auth"; import { ok, unauthorized } from "@/lib/server/response";
+export async function GET(){const u=await getCurrentUser();if(!u)return unauthorized();const rows=await prisma.task.findMany({where:{assigneeId:u.id,completed:false},include:{request:true},orderBy:{createdAt:"desc"}});return ok(rows.map(t=>({id:t.requestId,title:t.title,supplier:t.request.supplier,amount:t.request.amount,date:t.request.date.toISOString(),stage:t.stage,stageType:t.stageType,action:t.action})))}

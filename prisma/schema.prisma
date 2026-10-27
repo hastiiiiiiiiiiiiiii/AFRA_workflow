@@ -1,0 +1,154 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String      @id
+  username         String      @unique
+  mobile           String?
+  passwordHash     String
+  name             String
+  jobTitle         String
+  roleKey          String
+  active           Boolean     @default(true)
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  sessions         Session[]
+  requests         Request[]   @relation("CreatedRequests")
+  tasks            Task[]
+  activities       Activity[]
+  approvals        Approval[]
+  verifiedPayments Payment[]
+  settings         UserSetting?
+  @@index([mobile])
+  @@index([roleKey, active])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model Request {
+  id             String        @id
+  project        String
+  supplier       String
+  invoice        String?
+  requestNumber  String        @unique
+  date           DateTime
+  department     String
+  purchaseType   String
+  description    String?
+  amount         Int
+  status         String
+  statusType     String
+  currentStage   String
+  priority       String        @default("NORMAL")
+  createdById    String
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  createdBy      User          @relation("CreatedRequests", fields: [createdById], references: [id])
+  items          RequestItem[]
+  approvals      Approval[]
+  payment        Payment?
+  activities     Activity[]
+  tasks          Task[]
+  @@index([status])
+  @@index([currentStage])
+  @@index([createdById])
+  @@index([date])
+}
+
+model RequestItem {
+  id          Int      @id @default(autoincrement())
+  requestId   String
+  title       String
+  quantity    Int
+  unitPrice   Int
+  total       Int
+  description String?
+  request     Request  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+}
+
+model Approval {
+  id           Int      @id @default(autoincrement())
+  requestId    String
+  userId       String
+  roleKey      String
+  action       String
+  status       String
+  description  String?
+  returnTarget String?
+  createdAt    DateTime @default(now())
+  request      Request  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  user         User     @relation(fields: [userId], references: [id])
+  @@index([requestId, createdAt])
+}
+
+model Payment {
+  id           Int       @id @default(autoincrement())
+  requestId    String    @unique
+  amount       Int
+  paidAmount   Int       @default(0)
+  status       String
+  paidAt       DateTime?
+  receiptName  String?
+  receiptSize  String?
+  receiptPath  String?
+  verifiedAt   DateTime?
+  verifiedById String?
+  request      Request   @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  verifiedBy   User?     @relation(fields: [verifiedById], references: [id])
+}
+
+model Activity {
+  id          String    @id @default(cuid())
+  userId      String
+  requestId   String?
+  action      String
+  description String
+  type        String
+  createdAt   DateTime  @default(now())
+  user        User      @relation(fields: [userId], references: [id])
+  request     Request?  @relation(fields: [requestId], references: [id], onDelete: SetNull)
+  @@index([createdAt])
+  @@index([type])
+}
+
+model Task {
+  id         String   @id @default(cuid())
+  requestId  String
+  assigneeId String
+  title      String
+  stage      String
+  stageType  String
+  action     String
+  dueAt      DateTime?
+  completed  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  request    Request  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  assignee   User     @relation(fields: [assigneeId], references: [id])
+  @@index([assigneeId, completed])
+  @@index([requestId, completed])
+}
+
+model UserSetting {
+  userId             String  @id
+  theme              String  @default("light")
+  taskAssigned       Boolean @default(true)
+  requestUpdates     Boolean @default(true)
+  paymentUpdates     Boolean @default(true)
+  systemActivities   Boolean @default(false)
+  user               User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
